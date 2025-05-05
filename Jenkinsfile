@@ -1,78 +1,35 @@
 pipeline {
-    agent any
-    environment {
-        PROJECT_ID = 'suresh-jenkins-project'
-        IMAGE_NAME = "gcr.io/${PROJECT_ID}/ci-cd-demo"
-        IMAGE_TAG = "${env.BUILD_NUMBER ?: 'latest'}"
-        FULL_IMAGE = "${IMAGE_NAME}:${IMAGE_TAG}"
-        CLUSTER_NAME = 'ci-cd-cluster'
-        CLUSTER_ZONE = 'asia-south1-c'
-    }
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/sureshdike23/ProdOps_internal_devops-project.git'
-            }
-        }
-        stage('Build & Push Docker Image') {
-            steps {
-                withCredentials([file(credentialsId: 'gcp-key', variable: 'GCP_KEY')]) {
-                    sh '''
-                        echo "[STEP] Authenticating with GCP..."
-                        gcloud auth activate-service-account --key-file=$GCP_KEY
-                        gcloud config set project $PROJECT_ID
-                        gcloud auth configure-docker
+  agent any
 
-                        echo "[STEP] Building Docker image: $FULL_IMAGE"
-                        docker build -t $FULL_IMAGE .
+  environment {
+    PROJECT_ID = 'suresh-jenkins-project'
+    IMAGE = "gcr.io/$PROJECT_ID/my-app:${env.BUILD_NUMBER}"
+    CLUSTER = 'ci-cd-cluster'
+    ZONE = 'asia-south1-c'
+  }
 
-                        echo "[STEP] Pushing Docker image to GCR"
-                        docker push $FULL_IMAGE
-                    '''
-                }
-            }
-        }
-        stage('Configure kubectl') {
-            steps {
-                withCredentials([file(credentialsId: 'gcp-key', variable: 'GCP_KEY')]) {
-                    sh '''
-                        echo "[STEP] Getting GKE cluster credentials..."
-                        gcloud auth activate-service-account --key-file=$GCP_KEY
-                        gcloud config set project $PROJECT_ID
-                        gcloud container clusters get-credentials $CLUSTER_NAME --zone $CLUSTER_ZONE
-                    '''
-                }
-            }
-        }
-        stage('Deploy to Dev') {
-            steps {
-                sh '''
-                    echo "[STEP] Deploying to Dev..."
-                    sed "s|__IMAGE__|$FULL_IMAGE|" k8s/dev.yaml | kubectl apply -f -
-                '''
-            }
-        }
-        stage('Deploy to Test') {
-            steps {
-                sh '''
-                    echo "[STEP] Deploying to Test..."
-                    sed "s|__IMAGE__|$FULL_IMAGE|" k8s/test.yaml | kubectl apply -f -
-                '''
-            }
-        }
-        stage('Deploy to Prod') {
-            steps {
-                sh '''
-                    echo "[STEP] Deploying to Prod..."
-                    sed "s|__IMAGE__|$FULL_IMAGE|" k8s/prod.yaml | kubectl apply -f -
-                '''
-            }
-        }
+  stages {
+    stage('Clone Repo') {
+      steps {
+        git credentialsId: 'github-creds-id', url: 'https://github.com/sureshdike23/ProdOps_internal_devops-project.git'
+      }
     }
-    post {
-        always {
-            echo '[CLEANUP] Cleaning workspace...'
-            cleanWs()
-        }
+
+    stage('Build & Push Docker Image') {
+      steps {
+        sh 'gcloud auth configure-docker'
+        sh 'docker build -t $IMAGE .'
+        sh 'docker push $IMAGE'
+      }
     }
+
+    stage('Deploy to GKE') {
+      steps {
+        sh '''
+        gcloud container clusters get-credentials $CLUSTER --zone $ZONE --project $PROJECT_ID
+        kubectl set image deployment/my-app-deployment my-app-container=$IMAGE
+        '''
+      }
+    }
+  }
 }
