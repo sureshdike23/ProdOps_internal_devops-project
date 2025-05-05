@@ -9,16 +9,10 @@ pipeline {
   }
 
   stages {
-    stage('Clone Repo') {
-      steps {
-        git credentialsId: 'github-creds-id', url: 'https://github.com/sureshdike23/ProdOps_internal_devops-project.git'
-      }
-    }
-
     stage('Build & Push Docker Image') {
       steps {
-        sh 'gcloud auth configure-docker'
         sh 'docker build -t $IMAGE .'
+        sh 'gcloud auth configure-docker'
         sh 'docker push $IMAGE'
       }
     }
