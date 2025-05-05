@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: my-python-app
   namespace: dev
+  labels:
+    app: my-python-app
 spec:
   replicas: 1
   selector:
@@ -15,7 +17,7 @@ spec:
     spec:
       containers:
         - name: my-python-app
-          image: gcr.io/suresh-jenkins-project/my-python-app:latest
+          image: __IMAGE__
           ports:
             - containerPort: 5000
 ---
