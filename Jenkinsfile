@@ -26,9 +26,7 @@ spec:
 
   environment {
     PROJECT_ID = 'suresh-jenkins-project'
-    IMAGE_NAME = 'my-app'
-    IMAGE_TAG = "${BUILD_NUMBER}"
-    IMAGE = "gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG"
+    IMAGE = "gcr.io/$PROJECT_ID/my-app:${env.BUILD_NUMBER}"
     CLUSTER = 'ci-cd-cluster'
     ZONE = 'asia-south1-c'
   }
@@ -37,13 +35,13 @@ spec:
     stage('Build & Push Docker Image') {
       steps {
         container('docker-gcloud') {
-          script {
-            sh 'docker --version'
-            sh 'gcloud --version'
-
-            sh 'gcloud auth configure-docker --quiet'
-            sh "docker build -t $IMAGE ."
-            sh "docker push $IMAGE"
+          withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+            sh '''
+              gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+              gcloud auth configure-docker --quiet
+              docker build -t $IMAGE .
+              docker push $IMAGE
+            '''
           }
         }
       }
@@ -52,9 +50,12 @@ spec:
     stage('Deploy to GKE') {
       steps {
         container('docker-gcloud') {
-          script {
-            sh "gcloud container clusters get-credentials $CLUSTER --zone $ZONE --project $PROJECT_ID"
-            sh "kubectl set image deployment/my-app-deployment my-app-container=$IMAGE"
+          withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+            sh '''
+              gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+              gcloud container clusters get-credentials $CLUSTER --zone $ZONE --project $PROJECT_ID
+              kubectl set image deployment/my-app-deployment my-app-container=$IMAGE
+            '''
           }
         }
       }
