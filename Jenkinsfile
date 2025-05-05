@@ -33,24 +33,24 @@ pipeline {
         stage('Deploy to Dev') {
             steps {
                 sh '''
-                    echo "[STEP] Deploying to Dev environment..."
-                    kubectl apply -f k8s/dev.yaml
+                    echo "[STEP] Injecting image and deploying to Dev..."
+                    sed "s|__IMAGE__|$FULL_IMAGE|" k8s/dev.yaml | kubectl apply -f -
                 '''
             }
         }
         stage('Deploy to Test') {
             steps {
                 sh '''
-                    echo "[STEP] Deploying to Test environment..."
-                    kubectl apply -f k8s/test.yaml
+                    echo "[STEP] Injecting image and deploying to Test..."
+                    sed "s|__IMAGE__|$FULL_IMAGE|" k8s/test.yaml | kubectl apply -f -
                 '''
             }
         }
         stage('Deploy to Prod') {
             steps {
                 sh '''
-                    echo "[STEP] Deploying to Prod environment..."
-                    kubectl apply -f k8s/prod.yaml
+                    echo "[STEP] Injecting image and deploying to Prod..."
+                    sed "s|__IMAGE__|$FULL_IMAGE|" k8s/prod.yaml | kubectl apply -f -
                 '''
             }
         }
