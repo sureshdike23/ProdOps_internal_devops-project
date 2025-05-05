@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/sureshdike23/ProdOps_internal_devops-project.git'
+                git branch: 'main', url: 'https://github.com/sureshdike23/ProdOps_internal_devops-project.git'
             }
         }
         stage('Build & Push Docker Image') {
