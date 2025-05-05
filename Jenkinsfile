@@ -2,16 +2,15 @@ pipeline {
   agent {
     kubernetes {
       label 'gke-agent'
-      defaultContainer 'kubectl'
+      defaultContainer 'gcloud'
       yaml """
 apiVersion: v1
 kind: Pod
 spec:
   containers:
-    - name: kubectl
-      image: google/cloud-sdk:latest
-      command:
-        - cat
+    - name: gcloud
+      image: gcr.io/cloud-builders/gcloud
+      command: ['cat']
       tty: true
       volumeMounts:
         - name: gcp-key
@@ -37,7 +36,7 @@ spec:
   stages {
     stage('Authenticate with GCP') {
       steps {
-        container('kubectl') {
+        container('gcloud') {
           sh '''
             gcloud auth activate-service-account --key-file=$CREDENTIALS_PATH
             gcloud config set project $PROJECT_ID
@@ -46,12 +45,11 @@ spec:
       }
     }
 
-    stage('Build and Push Docker Image') {
+    stage('Build & Push Image with Cloud Build') {
       steps {
-        container('kubectl') {
+        container('gcloud') {
           sh '''
-            docker build -t gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG .
-            docker push gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+            gcloud builds submit --tag gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
           '''
         }
       }
@@ -59,7 +57,7 @@ spec:
 
     stage('Deploy to GKE') {
       steps {
-        container('kubectl') {
+        container('gcloud') {
           sh '''
             gcloud container clusters get-credentials $CLUSTER_NAME --zone $CLUSTER_ZONE --project $PROJECT_ID
             kubectl set image deployment/$IMAGE_NAME $IMAGE_NAME=gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
