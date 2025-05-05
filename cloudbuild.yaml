@@ -1,20 +1,25 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/[PROJECT-ID]/your-app', '.']
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/suresh-jenkins-project/your-app'
+      - '.'
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/[PROJECT-ID]/your-app']
+    args:
+      - 'push'
+      - 'gcr.io/suresh-jenkins-project/your-app'
 
   - name: 'gcr.io/cloud-builders/kubectl'
     args:
-      [
-        "apply",
-        "-f",
-        "k8s/",
-      ]
+      - 'apply'
+      - '-f'
+      - 'k8s/'
     env:
-      - "CLOUDSDK_COMPUTE_REGION=[REGION]"
-      - "CLOUDSDK_CONTAINER_CLUSTER=[CLUSTER-NAME]"
+      - 'CLOUDSDK_COMPUTE_REGION=asia-south1'
+      - 'CLOUDSDK_COMPUTE_ZONE=asia-south1-c'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=ci-cd-cluster'
 
 images:
-  - 'gcr.io/[PROJECT-ID]/your-app'
+  - 'gcr.io/suresh-jenkins-project/your-app'
